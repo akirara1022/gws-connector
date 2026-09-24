@@ -502,7 +502,8 @@ func (s *SheetsService) DuplicateTab(ctx context.Context, req mcp.CallToolReques
 		return ErrorResult(fmt.Errorf("spreadsheet_id is required")), nil
 	}
 	newTitle, _ := args["new_title"].(string)
-	if strings.TrimSpace(newTitle) == "" {
+	newTitle = strings.TrimSpace(newTitle)
+	if newTitle == "" {
 		return ErrorResult(fmt.Errorf("new_title is required")), nil
 	}
 	sourceTitle, _ := args["source_tab"].(string)
@@ -516,6 +517,12 @@ func (s *SheetsService) DuplicateTab(ctx context.Context, req mcp.CallToolReques
 	insertIndex, hasInsertIndex, err := optionalNonNegativeInt(args, "insert_index")
 	if err != nil {
 		return ErrorResult(err), nil
+	}
+	if !hasInsertIndex {
+		insertIndex, hasInsertIndex, err = optionalNonNegativeInt(args, "index")
+		if err != nil {
+			return ErrorResult(err), nil
+		}
 	}
 
 	ss, err := svc.Spreadsheets.Get(spreadsheetID).Fields("spreadsheetId,sheets.properties").Do()
@@ -579,12 +586,19 @@ func (s *SheetsService) AddTab(ctx context.Context, req mcp.CallToolRequest) (*m
 		return ErrorResult(fmt.Errorf("spreadsheet_id is required")), nil
 	}
 	title, _ := args["title"].(string)
-	if strings.TrimSpace(title) == "" {
+	title = strings.TrimSpace(title)
+	if title == "" {
 		return ErrorResult(fmt.Errorf("title is required")), nil
 	}
 	index, hasIndex, err := optionalNonNegativeInt(args, "index")
 	if err != nil {
 		return ErrorResult(err), nil
+	}
+	if !hasIndex {
+		index, hasIndex, err = optionalNonNegativeInt(args, "insert_index")
+		if err != nil {
+			return ErrorResult(err), nil
+		}
 	}
 
 	ss, err := svc.Spreadsheets.Get(spreadsheetID).Fields("spreadsheetId,sheets.properties").Do()
@@ -659,8 +673,9 @@ func optionalNonNegativeInt(args map[string]any, key string) (value int64, prese
 // Google Sheets treats tab names case-insensitively, so the comparison does
 // too.
 func ensureTabTitleFree(tabs []*sheets.Sheet, title string) error {
+	trimmed := strings.TrimSpace(title)
 	for _, sh := range tabs {
-		if sh.Properties != nil && strings.EqualFold(sh.Properties.Title, title) {
+		if sh.Properties != nil && strings.EqualFold(strings.TrimSpace(sh.Properties.Title), trimmed) {
 			return fmt.Errorf("a tab named %q already exists (id=%d); choose a different title — existing tabs are never overwritten",
 				sh.Properties.Title, sh.Properties.SheetId)
 		}

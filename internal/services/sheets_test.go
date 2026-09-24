@@ -237,6 +237,13 @@ func TestEnsureTabTitleFree_CaseInsensitive(t *testing.T) {
 	}
 }
 
+func TestEnsureTabTitleFree_Whitespace(t *testing.T) {
+	tabs := []*sheets.Sheet{{Properties: &sheets.SheetProperties{Title: "Invoice", SheetId: 5}}}
+	if err := ensureTabTitleFree(tabs, "  invoice  "); err == nil {
+		t.Error("expected whitespace-padded clash to error")
+	}
+}
+
 func TestFindSourceTab(t *testing.T) {
 	tabs := testTabs()
 
